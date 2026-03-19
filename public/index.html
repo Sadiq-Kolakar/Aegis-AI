@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aegis — Desktop Receiver</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+      .wa-bg {
+        background-color: #0b141a;
+        background-image:
+          radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+          radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 18px 18px;
+        background-position: 0 0, 9px 9px;
+      }
+      .shadow-soft {
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      }
+      @keyframes shimmer {
+        0% {
+          background-position: -200px 0;
+        }
+        100% {
+          background-position: calc(200px + 100%) 0;
+        }
+      }
+      .shimmer {
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
+        background-size: 200px 100%;
+        animation: shimmer 1.2s infinite;
+      }
+      @keyframes pulse-ring {
+        0% {
+          box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+        }
+      }
+      .pulse-danger {
+        animation: pulse-ring 1.6s infinite;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        width: 0px;
+        height: 0px;
+      }
+    </style>
+  </head>
+  <body class="h-screen w-screen overflow-hidden bg-[#0b141a] text-white">
+    <div class="h-full w-full flex">
+      <!-- Left sidebar -->
+      <aside class="w-80 bg-[#111b21] border-r border-white/5 flex flex-col">
+        <div class="h-16 px-4 flex items-center justify-between border-b border-white/5">
+          <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-full bg-purple-600 flex items-center justify-center font-extrabold">K</div>
+            <div class="text-sm">
+              <div class="font-semibold leading-tight">Kajal 👧</div>
+              <div class="text-xs text-white/60 leading-tight">Receiver view</div>
+            </div>
+          </div>
+          <div class="text-xs text-white/50">Aegis Demo</div>
+        </div>
+        <div class="p-3">
+          <div class="bg-white/5 rounded-xl px-3 py-2 flex items-center gap-2">
+            <svg class="h-4 w-4 text-white/40" viewBox="0 0 24 24" fill="none">
+              <path d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+            <input class="w-full bg-transparent outline-none text-sm placeholder:text-white/35" placeholder="Search or start new chat" />
+          </div>
+        </div>
+        <div class="px-2 pb-2">
+          <button class="w-full text-left p-3 rounded-xl hover:bg-white/5 transition flex items-center gap-3">
+            <div class="relative">
+              <div class="h-11 w-11 rounded-full bg-emerald-500 flex items-center justify-center font-extrabold text-[#062b2d]">S</div>
+              <span class="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-emerald-400 ring-2 ring-[#111b21]"></span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center justify-between">
+                <div class="font-semibold truncate">Sadiq 👦</div>
+                <div class="text-xs text-white/50">online</div>
+              </div>
+              <div class="text-sm text-white/50 truncate">Ready for the demo</div>
+            </div>
+          </button>
+        </div>
+        <div class="mt-auto p-4 text-xs text-white/40">
+          Tip: Keep judges on this screen.
+        </div>
+      </aside>
+
+      <!-- Chat -->
+      <main class="flex-1 flex flex-col bg-[#0b141a]">
+        <header class="h-16 px-4 flex items-center justify-between border-b border-white/5 bg-[#111b21]">
+          <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-full bg-emerald-500 flex items-center justify-center font-extrabold text-[#062b2d]">S</div>
+            <div>
+              <div class="font-semibold leading-tight flex items-center gap-2">
+                <span>Sadiq 👦</span>
+                <span id="aegisBadge" class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
+                  🟢 Safe Zone
+                </span>
+              </div>
+              <div class="text-xs text-white/60 leading-tight">online</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 text-white/70">
+            <button class="p-2 rounded-lg hover:bg-white/5 transition" title="Search">
+              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none">
+                <path d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </button>
+            <button class="p-2 rounded-lg hover:bg-white/5 transition" title="Menu">
+              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none">
+                <path d="M12 6h.01M12 12h.01M12 18h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="flex-1 flex overflow-hidden">
+          <section class="flex-1 relative wa-bg">
+            <div id="chatFlash" class="pointer-events-none absolute inset-0 bg-white opacity-0 transition-opacity duration-200"></div>
+
+            <div id="chat-messages" class="h-full overflow-y-auto no-scrollbar px-6 py-5 space-y-2">
+              <!-- Preloaded messages -->
+              <div class="flex justify-start">
+                <div class="max-w-[72%] rounded-2xl rounded-tl-md bg-[#202c33] px-3 py-2 shadow-soft">
+                  <div class="text-sm">hey! you ready for the hackathon demo? 😄</div>
+                  <div class="mt-1 text-[11px] text-white/50 flex items-center justify-end gap-1">
+                    <span>10:12 AM</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex justify-start">
+                <div class="max-w-[72%] rounded-2xl rounded-tl-md bg-[#202c33] px-3 py-2 shadow-soft">
+                  <div class="text-sm">watch this, sending something now 👀</div>
+                  <div class="mt-1 text-[11px] text-white/50 flex items-center justify-end gap-1">
+                    <span>10:13 AM</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- typing indicator -->
+            <div id="typingRow" class="absolute bottom-4 left-6 hidden">
+              <div class="flex items-center gap-2 bg-black/35 border border-white/10 rounded-full px-3 py-2">
+                <span class="text-xs text-white/70">typing</span>
+                <span class="flex gap-1">
+                  <span class="h-2 w-2 rounded-full bg-white/60 animate-bounce [animation-delay:-0.2s]"></span>
+                  <span class="h-2 w-2 rounded-full bg-white/60 animate-bounce [animation-delay:-0.1s]"></span>
+                  <span class="h-2 w-2 rounded-full bg-white/60 animate-bounce"></span>
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Incident Monitor -->
+          <aside class="w-72 bg-[#111b21] border-l border-white/5 flex flex-col">
+            <div class="h-16 px-4 flex items-center justify-between border-b border-white/5">
+              <div class="font-extrabold">Aegis Monitor</div>
+              <div id="incidentCount" class="text-xs text-white/60">0 incidents</div>
+            </div>
+
+            <!-- Demo setup checklist -->
+            <div id="setupChecklist" class="p-4 border-b border-white/5"></div>
+
+            <div class="p-4 border-b border-white/5">
+              <div class="rounded-2xl bg-white/5 border border-white/10 p-4">
+                <div class="flex items-center justify-between">
+                  <div class="text-xs text-white/60 font-semibold">Safety Score</div>
+                  <div id="safetyLabel" class="text-xs font-extrabold text-emerald-300">Excellent</div>
+                </div>
+                <div class="mt-3 relative">
+                  <div class="h-3 w-full rounded-full bg-white/10 overflow-hidden">
+                    <div id="safetyBar" class="h-full w-full bg-emerald-500"></div>
+                  </div>
+                  <div class="mt-3 flex items-end justify-between">
+                    <div>
+                      <div id="safetyScore" class="text-4xl font-black leading-none">100</div>
+                      <div class="text-xs text-white/50">Safety Score</div>
+                    </div>
+                    <div class="text-xs text-white/50 text-right">
+                      -10 mild<br />
+                      -25 severe
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="incidentList" class="flex-1 overflow-y-auto no-scrollbar p-3 space-y-2"></div>
+          </aside>
+        </div>
+      </main>
+    </div>
+
+    <!-- Severe modal -->
+    <div id="blockedModal" class="fixed inset-0 hidden items-center justify-center bg-black/70">
+      <div class="w-[min(640px,92vw)] rounded-2xl bg-[#111b21] border border-white/10 p-6 shadow-soft">
+        <div class="flex items-start gap-4">
+          <div class="h-12 w-12 rounded-2xl bg-red-500/15 border border-red-500/25 flex items-center justify-center text-2xl">🛡️</div>
+          <div class="flex-1">
+            <div class="text-xl font-black text-red-400">Message Blocked by Aegis</div>
+            <div class="text-sm text-white/60 mt-1">Intercepted before reaching recipient</div>
+          </div>
+        </div>
+        <div class="mt-5 space-y-3">
+          <div class="rounded-xl bg-black/35 border border-white/10 p-4">
+            <div class="text-xs text-white/50 mb-2">Blocked message</div>
+            <div id="modalMessage" class="text-sm"></div>
+          </div>
+          <div class="rounded-xl bg-red-500/10 border-l-4 border-red-500 p-4">
+            <div class="text-xs font-extrabold text-red-300 mb-1">Reason</div>
+            <div id="modalReason" class="text-sm text-white/80"></div>
+          </div>
+          <div class="flex items-center justify-between rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3">
+            <div class="text-sm font-semibold">✓ Parent notified via email</div>
+            <div class="text-xs text-white/60">Aegis Alert</div>
+          </div>
+          <div class="rounded-xl bg-white/5 border border-white/10 p-3 flex items-center justify-between">
+            <div class="text-sm text-white/70">⚡ Intervention time</div>
+            <div id="modalTime" class="text-sm font-extrabold"></div>
+          </div>
+        </div>
+        <div class="mt-6 flex justify-end">
+          <button id="dismissModal" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 transition font-semibold">
+            Dismiss
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const socket = io();
+      const messagesEl = document.getElementById('chat-messages');
+      const typingRow = document.getElementById('typingRow');
+      const badgeEl = document.getElementById('aegisBadge');
+      const safetyScoreEl = document.getElementById('safetyScore');
+      const safetyBarEl = document.getElementById('safetyBar');
+      const safetyLabelEl = document.getElementById('safetyLabel');
+      const incidentListEl = document.getElementById('incidentList');
+      const incidentCountEl = document.getElementById('incidentCount');
+      const chatFlash = document.getElementById('chatFlash');
+      const setupChecklistEl = document.getElementById('setupChecklist');
+
+      const modal = document.getElementById('blockedModal');
+      const modalMessage = document.getElementById('modalMessage');
+      const modalReason = document.getElementById('modalReason');
+      const modalTime = document.getElementById('modalTime');
+      document.getElementById('dismissModal').addEventListener('click', () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      });
+
+      let statusLevel = 0; // 0 safe, 1 mild, 2 severe
+      let safetyScore = 100;
+      let lastSkeleton = null;
+
+      function renderSetupChecklist(cfg) {
+        const c = cfg || {};
+        const issues = [];
+
+        if (!c.anthropicKeyPresent) issues.push('Missing ANTHROPIC_API_KEY (Claude scanning will default to safe).');
+
+        if (c.emailEnabled) {
+          if (!c.emailUserPresent) issues.push('EMAIL_ENABLED=true but EMAIL_USER is missing.');
+          if (!c.emailPassPresent) issues.push('EMAIL_ENABLED=true but EMAIL_PASS is missing.');
+          if (!c.parentEmailPresent) issues.push('EMAIL_ENABLED=true but PARENT_EMAIL is missing.');
+        } else {
+          issues.push('EMAIL_ENABLED=false (parent alerts are OFF).');
+        }
+
+        const ok = issues.length === 0;
+        const warnOnly = !ok && issues.length === 1 && issues[0].includes('EMAIL_ENABLED=false') && c.anthropicKeyPresent;
+
+        const tone = ok ? 'ok' : warnOnly ? 'warn' : 'bad';
+        const title =
+          tone === 'ok'
+            ? '✅ Demo Setup: Ready'
+            : tone === 'warn'
+              ? '🟡 Demo Setup: Almost ready'
+              : '🔴 Demo Setup: Action needed';
+
+        const wrapCls =
+          tone === 'ok'
+            ? 'bg-emerald-500/10 border-emerald-500/25'
+            : tone === 'warn'
+              ? 'bg-yellow-500/10 border-yellow-500/25'
+              : 'bg-red-500/10 border-red-500/25';
+
+        const titleCls =
+          tone === 'ok' ? 'text-emerald-200' : tone === 'warn' ? 'text-yellow-200' : 'text-red-200';
+
+        const rows = [
+          { label: 'Claude API Key', ok: !!c.anthropicKeyPresent, hint: 'ANTHROPIC_API_KEY' },
+          { label: 'Email Alerts', ok: !!c.emailEnabled && !!c.emailReady, hint: 'EMAIL_ENABLED + EMAIL_USER/PASS + PARENT_EMAIL' }
+        ];
+
+        setupChecklistEl.innerHTML = `
+          <div class="rounded-2xl border ${wrapCls} p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="font-extrabold ${titleCls}">${title}</div>
+                <div class="text-xs text-white/60 mt-1">Quick checklist so the hackathon demo never surprises you.</div>
+              </div>
+              <button id="setupDetailsBtn" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/15 transition">
+                Details
+              </button>
+            </div>
+            <div class="mt-3 space-y-2">
+              ${rows
+                .map(
+                  (r) => `
+                    <div class="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-3 py-2">
+                      <div class="text-sm font-semibold">${r.label}</div>
+                      <div class="text-xs ${r.ok ? 'text-emerald-200' : 'text-red-200'} font-extrabold">${r.ok ? 'OK' : 'MISSING'}</div>
+                    </div>
+                  `
+                )
+                .join('')}
+            </div>
+            <div id="setupDetails" class="mt-3 hidden">
+              <div class="text-xs text-white/60 mb-2">Notes</div>
+              <ul class="text-xs text-white/70 space-y-1 list-disc pl-5">
+                ${issues.length ? issues.map((x) => `<li>${escapeHtml(x)}</li>`).join('') : '<li>All systems green.</li>'}
+              </ul>
+              <div class="mt-3 text-[11px] text-white/50">
+                Update <span class="font-semibold">.env</span> and restart the server to refresh.
+              </div>
+            </div>
+          </div>
+        `;
+
+        const btn = document.getElementById('setupDetailsBtn');
+        const details = document.getElementById('setupDetails');
+        if (btn && details) {
+          btn.addEventListener('click', () => {
+            details.classList.toggle('hidden');
+          });
+        }
+      }
+
+      function setStatusLevel(next) {
+        statusLevel = Math.max(statusLevel, next);
+        badgeEl.classList.remove('bg-emerald-500/15', 'text-emerald-300', 'border-emerald-500/25');
+        badgeEl.classList.remove('bg-yellow-500/15', 'text-yellow-200', 'border-yellow-500/25');
+        badgeEl.classList.remove('bg-red-500/15', 'text-red-200', 'border-red-500/25', 'pulse-danger');
+
+        if (statusLevel === 0) {
+          badgeEl.textContent = '🟢 Safe Zone';
+          badgeEl.classList.add('bg-emerald-500/15', 'text-emerald-300', 'border', 'border-emerald-500/25');
+        } else if (statusLevel === 1) {
+          badgeEl.textContent = '🟡 Monitoring Behavior';
+          badgeEl.classList.add('bg-yellow-500/15', 'text-yellow-200', 'border', 'border-yellow-500/25');
+        } else {
+          badgeEl.textContent = '🔴 Intervention Mode';
+          badgeEl.classList.add('bg-red-500/15', 'text-red-200', 'border', 'border-red-500/25', 'pulse-danger');
+        }
+      }
+
+      function setSafetyScore(next) {
+        safetyScore = Math.max(0, Math.min(100, next));
+        safetyScoreEl.textContent = String(safetyScore);
+        safetyBarEl.style.width = safetyScore + '%';
+        safetyBarEl.className = 'h-full';
+        if (safetyScore >= 75) {
+          safetyBarEl.classList.add('bg-emerald-500');
+          safetyLabelEl.textContent = 'Excellent';
+          safetyLabelEl.className = 'text-xs font-extrabold text-emerald-300';
+        } else if (safetyScore >= 45) {
+          safetyBarEl.classList.add('bg-yellow-500');
+          safetyLabelEl.textContent = 'Caution';
+          safetyLabelEl.className = 'text-xs font-extrabold text-yellow-200';
+        } else {
+          safetyBarEl.classList.add('bg-red-500');
+          safetyLabelEl.textContent = 'Critical';
+          safetyLabelEl.className = 'text-xs font-extrabold text-red-300';
+        }
+      }
+
+      function scrollToBottom() {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      function fmtTime(ts) {
+        const d = new Date(ts);
+        const h = d.getHours() % 12 || 12;
+        const m = String(d.getMinutes()).padStart(2, '0');
+        const am = d.getHours() >= 12 ? 'PM' : 'AM';
+        return `${h}:${m} ${am}`;
+      }
+
+      function addIncomingBubble({ text, metaHtml }) {
+        const row = document.createElement('div');
+        row.className = 'flex justify-start';
+        row.innerHTML = `
+          <div class="max-w-[72%] rounded-2xl rounded-tl-md bg-[#202c33] px-3 py-2 shadow-soft">
+            <div class="text-sm">${escapeHtml(text)}</div>
+            ${metaHtml || `<div class="mt-1 text-[11px] text-white/50 flex items-center justify-end gap-1"><span>${fmtTime(Date.now())}</span></div>`}
+          </div>
+        `;
+        messagesEl.appendChild(row);
+        scrollToBottom();
+        return row;
+      }
+
+      function addSkeleton() {
+        removeSkeleton();
+        const row = document.createElement('div');
+        row.className = 'flex justify-start';
+        row.innerHTML = `
+          <div class="max-w-[62%] rounded-2xl rounded-tl-md bg-[#202c33] px-3 py-3 shadow-soft">
+            <div class="h-3 w-56 rounded shimmer"></div>
+            <div class="mt-2 h-3 w-40 rounded shimmer"></div>
+          </div>
+        `;
+        messagesEl.appendChild(row);
+        lastSkeleton = row;
+        scrollToBottom();
+      }
+
+      function removeSkeleton() {
+        if (lastSkeleton && lastSkeleton.parentNode) lastSkeleton.parentNode.removeChild(lastSkeleton);
+        lastSkeleton = null;
+      }
+
+      function escapeHtml(s) {
+        return String(s || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function renderIncidents(incidents) {
+        const list = Array.isArray(incidents) ? incidents : [];
+        incidentListEl.innerHTML = '';
+        incidentCountEl.textContent = `${list.length} incident${list.length === 1 ? '' : 's'}`;
+
+        for (const inc of list) {
+          const sev = inc.severity;
+          const emoji = sev === 'severe' ? '🔴' : sev === 'mild' ? '🟡' : '🟢';
+          const score = typeof inc.score === 'number' ? inc.score : 0;
+          const snippet = (inc.text || '').toString().slice(0, 44) + ((inc.text || '').length > 44 ? '…' : '');
+          const time = fmtTime(inc.time || Date.now());
+          const barColor = sev === 'severe' ? 'bg-red-500' : sev === 'mild' ? 'bg-yellow-500' : 'bg-emerald-500';
+          const cap = inc.screenshotCaptured ? `<span class="ml-2 text-xs text-white/70">📸 Screenshot captured &amp; sent to parent</span>` : '';
+
+          const card = document.createElement('div');
+          card.className = 'rounded-2xl bg-white/5 border border-white/10 p-3';
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <div class="text-lg">${emoji}</div>
+                  <div class="font-extrabold truncate">${escapeHtml(inc.sender || 'Unknown')}</div>
+                </div>
+                <div class="text-xs text-white/60 mt-1 truncate">${escapeHtml(snippet)}</div>
+              </div>
+              <div class="text-[11px] text-white/45">${time}</div>
+            </div>
+            <div class="mt-2">
+              <div class="h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                <div class="h-full ${barColor}" style="width:${Math.max(0, Math.min(100, score))}%"></div>
+              </div>
+              <div class="mt-1 text-[11px] text-white/55 flex items-center justify-between">
+                <span>Toxicity ${Math.round(score)}%</span>
+                <span>${cap}</span>
+              </div>
+            </div>
+          `;
+          incidentListEl.appendChild(card);
+        }
+      }
+
+      socket.on('scanning', () => {
+        addSkeleton();
+      });
+
+      socket.on('message', (data) => {
+        removeSkeleton();
+        const severity = data?.severity || 'safe';
+        const score = typeof data?.score === 'number' ? data.score : 0;
+        if (severity === 'mild') {
+          setStatusLevel(1);
+          setSafetyScore(safetyScore - 10);
+          addIncomingBubble({
+            text: data.text || '',
+            metaHtml: `
+              <div class="mt-1 flex items-center justify-between gap-2">
+                <div class="text-[11px] text-yellow-200 font-semibold">⚠️ Flagged by Aegis · Toxicity ${Math.round(score)}%</div>
+                <div class="text-[11px] text-white/45">${fmtTime(Date.now())}</div>
+              </div>
+            `
+          });
+        } else {
+          addIncomingBubble({
+            text: data.text || '',
+            metaHtml: `
+              <div class="mt-1 text-[11px] text-white/50 flex items-center justify-end gap-2">
+                <span>${fmtTime(Date.now())}</span>
+                <span class="text-emerald-300 font-semibold">✓✓</span>
+              </div>
+            `
+          });
+        }
+      });
+
+      socket.on('message_blocked', (data) => {
+        removeSkeleton();
+        setStatusLevel(2);
+        setSafetyScore(safetyScore - 25);
+
+        modalMessage.textContent = `“${data?.text || ''}”`;
+        modalReason.textContent = data?.reason || 'Blocked by Aegis';
+        modalTime.textContent = `${data?.interventionTime || 0}ms`;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      });
+
+      socket.on('show_typing', () => {
+        typingRow.classList.remove('hidden');
+      });
+      socket.on('hide_typing', () => {
+        typingRow.classList.add('hidden');
+      });
+
+      socket.on('incidents_update', (data) => {
+        renderIncidents(data);
+      });
+
+      socket.on('take_screenshot', async (data) => {
+        const incidentId = data?.incidentId;
+        if (!incidentId) return;
+
+        // flash
+        chatFlash.classList.remove('opacity-0');
+        chatFlash.classList.add('opacity-80');
+        setTimeout(() => {
+          chatFlash.classList.remove('opacity-80');
+          chatFlash.classList.add('opacity-0');
+        }, 250);
+
+        try {
+          const node = document.getElementById('chat-messages');
+          const canvas = await html2canvas(node, {
+            backgroundColor: '#0b141a',
+            scale: 1.5,
+            useCORS: true,
+            allowTaint: true
+          });
+          const imageData = canvas.toDataURL('image/png');
+          socket.emit('screenshot_ready', { incidentId, imageData });
+        } catch {
+          socket.emit('screenshot_ready', { incidentId, imageData: null });
+        }
+      });
+
+      // initial UI state
+      setStatusLevel(0);
+      setSafetyScore(100);
+      scrollToBottom();
+
+      // demo setup checklist (booleans only)
+      fetch('/demo-config')
+        .then((r) => r.json())
+        .then((cfg) => renderSetupChecklist(cfg))
+        .catch(() => renderSetupChecklist({ anthropicKeyPresent: false, emailEnabled: false }));
+    </script>
+  </body>
+</html>
+

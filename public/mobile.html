@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Aegis — Mobile Sender</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+      .wa-bg {
+        background-color: #0b141a;
+        background-image:
+          radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+          radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 18px 18px;
+        background-position: 0 0, 9px 9px;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        width: 0px;
+        height: 0px;
+      }
+    </style>
+  </head>
+  <body class="h-screen w-screen overflow-hidden bg-[#0b141a] text-white">
+    <div class="h-full w-full flex flex-col">
+      <!-- Header -->
+      <header class="h-14 px-3 flex items-center justify-between bg-[#111b21] border-b border-white/5">
+        <div class="flex items-center gap-3">
+          <button class="p-2 -ml-1 rounded-lg hover:bg-white/5 transition" aria-label="Back">
+            <svg class="h-5 w-5 text-white/80" viewBox="0 0 24 24" fill="none">
+              <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+          <div class="h-9 w-9 rounded-full bg-purple-600 flex items-center justify-center font-extrabold">K</div>
+          <div class="leading-tight">
+            <div class="font-semibold">Kajal 👧</div>
+            <div class="text-xs text-white/60">online</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 text-white/70">
+          <button class="p-2 rounded-lg hover:bg-white/5 transition" aria-label="Video">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none">
+              <path d="M15 10l6-3v10l-6-3V10z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+              <path d="M3 7a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </button>
+          <button class="p-2 rounded-lg hover:bg-white/5 transition" aria-label="Call">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M22 16.92v3a2 2 0 01-2.18 2 19.86 19.86 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.86 19.86 0 012.08 4.18 2 2 0 014.06 2h3a2 2 0 012 1.72c.12.86.3 1.7.54 2.5a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.58-1.6a2 2 0 012.11-.45c.8.24 1.64.42 2.5.54A2 2 0 0122 16.92z"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Messages -->
+      <main class="flex-1 wa-bg overflow-hidden relative">
+        <div id="messages" class="h-full overflow-y-auto no-scrollbar px-4 py-4 space-y-2">
+          <!-- Preloaded messages mirroring desktop -->
+          <div class="flex justify-start">
+            <div class="max-w-[78%] rounded-2xl rounded-tl-md bg-[#202c33] px-3 py-2">
+              <div class="text-sm">hey! you ready for the hackathon demo? 😄</div>
+              <div class="mt-1 text-[11px] text-white/50 flex items-center justify-end gap-1">
+                <span>10:12 AM</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex justify-start">
+            <div class="max-w-[78%] rounded-2xl rounded-tl-md bg-[#202c33] px-3 py-2">
+              <div class="text-sm">watch this, sending something now 👀</div>
+              <div class="mt-1 text-[11px] text-white/50 flex items-center justify-end gap-1">
+                <span>10:13 AM</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="typingIndicator" class="absolute bottom-20 left-4 hidden">
+          <div class="bg-black/35 border border-white/10 rounded-full px-3 py-2 text-xs text-white/70">
+            Kajal is typing…
+          </div>
+        </div>
+
+        <div id="toast" class="pointer-events-none fixed bottom-24 left-1/2 -translate-x-1/2 hidden">
+          <div class="bg-red-500 text-white px-4 py-2 rounded-full font-semibold shadow-lg">
+            🛡️ Message blocked by Aegis
+          </div>
+        </div>
+      </main>
+
+      <!-- Composer -->
+      <footer class="bg-[#111b21] border-t border-white/5 px-3 pt-2 pb-3">
+        <div class="flex items-center gap-2">
+          <button class="p-2 rounded-full hover:bg-white/5 transition" aria-label="Emoji">
+            <svg class="h-6 w-6 text-white/70" viewBox="0 0 24 24" fill="none">
+              <path d="M12 22a10 10 0 100-20 10 10 0 000 20z" stroke="currentColor" stroke-width="2" />
+              <path d="M8 14s1.5 2 4 2 4-2 4-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              <path d="M9 10h.01M15 10h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+            </svg>
+          </button>
+          <div class="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2">
+            <input
+              id="input"
+              class="w-full bg-transparent outline-none text-sm placeholder:text-white/35"
+              placeholder="Type a message"
+              autocomplete="off"
+            />
+          </div>
+          <button id="micBtn" class="p-2 rounded-full hover:bg-white/5 transition" aria-label="Mic">
+            <svg class="h-6 w-6 text-white/70" viewBox="0 0 24 24" fill="none">
+              <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" stroke="currentColor" stroke-width="2" />
+              <path d="M19 10v2a7 7 0 01-14 0v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              <path d="M12 19v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </button>
+          <button id="sendBtn" class="hidden p-2 rounded-full bg-emerald-500 hover:bg-emerald-400 transition" aria-label="Send">
+            <svg class="h-6 w-6 text-[#062b2d]" viewBox="0 0 24 24" fill="none">
+              <path d="M22 2L11 13" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </div>
+        <div id="scanLine" class="mt-2 text-xs text-white/50 hidden animate-pulse">🛡️ Aegis scanning…</div>
+      </footer>
+    </div>
+
+    <script>
+      const socket = io();
+      const messagesEl = document.getElementById('messages');
+      const inputEl = document.getElementById('input');
+      const sendBtn = document.getElementById('sendBtn');
+      const micBtn = document.getElementById('micBtn');
+      const scanLine = document.getElementById('scanLine');
+      const toast = document.getElementById('toast');
+      const typingIndicator = document.getElementById('typingIndicator');
+
+      let pendingOptimistic = null; // { id, row, text }
+
+      function scrollToBottom() {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      function fmtTime(ts) {
+        const d = new Date(ts);
+        const h = d.getHours() % 12 || 12;
+        const m = String(d.getMinutes()).padStart(2, '0');
+        const am = d.getHours() >= 12 ? 'PM' : 'AM';
+        return `${h}:${m} ${am}`;
+      }
+
+      function escapeHtml(s) {
+        return String(s || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function setComposerMode() {
+        const hasText = inputEl.value.trim().length > 0;
+        if (hasText) {
+          micBtn.classList.add('hidden');
+          sendBtn.classList.remove('hidden');
+        } else {
+          micBtn.classList.remove('hidden');
+          sendBtn.classList.add('hidden');
+        }
+      }
+
+      function addOutgoingOptimistic(text) {
+        const id = Date.now();
+        const row = document.createElement('div');
+        row.className = 'flex justify-end';
+        row.dataset.optimisticId = String(id);
+        row.innerHTML = `
+          <div class="max-w-[78%] rounded-2xl rounded-tr-md bg-[#005c4b] px-3 py-2">
+            <div class="text-sm">${escapeHtml(text)}</div>
+            <div class="mt-1 text-[11px] text-white/60 flex items-center justify-end gap-2">
+              <span>${fmtTime(Date.now())}</span>
+              <span class="text-white/70">✓</span>
+            </div>
+          </div>
+        `;
+        messagesEl.appendChild(row);
+        scrollToBottom();
+        pendingOptimistic = { id, row, text };
+        return id;
+      }
+
+      function markOptimisticDelivered() {
+        if (!pendingOptimistic?.row) return;
+        const tick = pendingOptimistic.row.querySelector('span.text-white\\/70');
+        if (tick) {
+          tick.textContent = '✓✓';
+          tick.className = 'text-emerald-200 font-semibold';
+        }
+        pendingOptimistic = null;
+      }
+
+      function removeOptimistic() {
+        if (pendingOptimistic?.row && pendingOptimistic.row.parentNode) {
+          pendingOptimistic.row.parentNode.removeChild(pendingOptimistic.row);
+        }
+        pendingOptimistic = null;
+      }
+
+      function showToast() {
+        toast.classList.remove('hidden');
+        toast.classList.add('block');
+        toast.style.opacity = '0';
+        toast.style.transform = 'translate(-50%, 10px)';
+        requestAnimationFrame(() => {
+          toast.style.transition = 'all 250ms ease';
+          toast.style.opacity = '1';
+          toast.style.transform = 'translate(-50%, 0px)';
+        });
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translate(-50%, 10px)';
+        }, 2500);
+        setTimeout(() => {
+          toast.classList.add('hidden');
+          toast.classList.remove('block');
+        }, 3100);
+      }
+
+      async function sendMessage() {
+        const text = inputEl.value.trim();
+        if (!text) return;
+
+        inputEl.value = '';
+        setComposerMode();
+
+        addOutgoingOptimistic(text);
+        scanLine.classList.remove('hidden');
+
+        socket.emit('send_message', { text, sender: 'Kajal 👧' });
+        socket.emit('typing');
+        setTimeout(() => socket.emit('stop_typing'), 500);
+      }
+
+      inputEl.addEventListener('input', setComposerMode);
+      inputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+      sendBtn.addEventListener('click', sendMessage);
+
+      socket.on('message', () => {
+        scanLine.classList.add('hidden');
+        markOptimisticDelivered();
+      });
+
+      socket.on('message_blocked', () => {
+        scanLine.classList.add('hidden');
+        removeOptimistic();
+        showToast();
+      });
+
+      socket.on('show_typing', () => {
+        typingIndicator.classList.remove('hidden');
+      });
+      socket.on('hide_typing', () => {
+        typingIndicator.classList.add('hidden');
+      });
+
+      setComposerMode();
+      scrollToBottom();
+    </script>
+  </body>
+</html>
+
