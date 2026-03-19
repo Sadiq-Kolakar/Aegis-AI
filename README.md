@@ -1,64 +1,105 @@
-# Aegis-AI: Real-time WhatsApp Web Safety Demo
+<div align="center">
+  <h1>🛡️ Aegis-AI</h1>
+  <p><strong>A Real-Time AI Safety Overlay for Modern Messaging</strong></p>
 
-Aegis-AI is a powerful demonstration of a real-time safety system built on top of a WhatsApp Web-like interface. It utilizes Anthropic's Claude API to intelligently analyze incoming messages for harassment, toxic behavior, and bullying, going beyond simple keyword matching to understand context and behavioral patterns.
+  [![Node.js](https://img.shields.io/badge/Node.js-18.x-green.svg?style=for-the-badge&logo=node.js)](https://nodejs.org/)
+  [![Express.js](https://img.shields.io/badge/Express.js-Backend-black.svg?style=for-the-badge&logo=express)](https://expressjs.com/)
+  [![Socket.io](https://img.shields.io/badge/Socket.io-Real--Time-blue.svg?style=for-the-badge&logo=socket.io)](https://socket.io/)
+  [![Anthropic](https://img.shields.io/badge/AI-Claude_3-purple.svg?style=for-the-badge)](https://anthropic.com/)
+</div>
 
-## Features
+<br />
 
-- **Contextual AI Analysis:** Uses the Claude API (`@anthropic-ai/sdk`) to analyze the intent and severity of messages in real-time.
-- **Pattern Recognition Escalation:** Detects when a sender repeatedly sends "mild" harassing messages and automatically escalates the threat level to "severe".
-- **Real-time Synchronization:** Built with Express and Socket.io for immediate message delivery and status updates between the "mobile" sender and the "desktop" receiver.
-- **Parental/Admin Email Alerts:** Integrates `nodemailer` to send automated email alerts including message content, context, context reasons, and optionally a screenshot.
-- **Desktop Screenshot Capture:** Can request and capture a screenshot of the desktop interface when a severe incident occurs.
+> **Aegis-AI** goes beyond traditional keyword filters. By leveraging Anthropic's Claude framework, this system detects intent, behavioral patterns, and multi-message escalations to protect users (especially children) from cyberbullying and harassment in real-time.
 
-## Tech Stack
+---
 
-- **Backend:** Node.js, Express.js
-- **Real-time Communication:** Socket.io
-- **AI Integration:** Anthropic AI API
-- **Email Delivery:** Nodemailer
-- **Frontend:** HTML, CSS, JavaScript (Vanilla)
+## ✨ Key Features
 
-## How It Works
+*   **🧠 Contextual AI Analysis**: Analyzes the deepest intent of messages, understanding context, sarcasm, and nuanced aggression.
+*   **📈 Pattern Recognition**: Not just single-message tracking. Repeated "mild" offenses are flagged and automatically escalated to "severe" status.
+*   **⚡ Real-Time Intervention**: Messages are blocked split-second before reaching the recipient's screen via bi-directional `Socket.io` sockets.
+*   **📸 Automated Evidence Capture**: Requests and saves instant desktop screenshots upon the detection of severe harassment.
+*   **📧 Escalation Alerts**: Parents/Admins receive immediate email alerts via `nodemailer` with exactly what was said, the reason it was blocked, and the screenshot capturing the context.
 
-The demo involves two interfaces:
-1. **Laptop (Receiver):** Simulates the WhatsApp Web interface (`index.html`).
-2. **Phone (Sender):** Simulates the mobile interface for sending messages (`mobile.html`).
+---
 
-When a message is sent from the phone, the server analyzes it using Claude. If a message is deemed "severe" (or escalated due to patterns), the message is blocked on the receiver's end, and an alert (with an optional screenshot) can be dispatched via email.
+## 🏗️ Architecture
 
-## Setup & Running the Demo
+Aegis functions as a dual-interface demonstration:
+1.  **💻 Desktop Interface (`index.html`)**: Acts as the receiving WhatsApp Web clone.
+2.  **📱 Mobile Interface (`mobile.html`)**: Acts as the sender's messaging app.
 
-1. **Clone the repository** (if you haven't already).
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-3. **Configure Environment Variables:**
-   Create a `.env` file in the root directory and add the necessary variables:
-   ```env
-   ANTHROPIC_API_KEY=your_anthropic_api_key
-   EMAIL_ENABLED=false # Set to true to enable email sending
-   EMAIL_USER=your_email@example.com
-   EMAIL_PASS=your_email_password
-   PARENT_EMAIL=parent@example.com
-   PORT=3000
-   ```
-4. **Start the Server:**
-   ```bash
-   npm start
-   ```
-5. **Access the Interfaces:**
-   - The server will print the URLs to the console.
-   - Open the **Laptop (Receiver)** URL on your computer (e.g., `http://localhost:3000`).
-   - Open the **Phone (Sender)** URL on a mobile device connected to the same network (e.g., `http://<your-ip-address>:3000/mobile.html`).
+Both connect concurrently to the Node.js backend which proxies all communications through the Claude AI middleware before relaying. 
 
-## Demo Script Example
+---
 
-1. **SAFE:** "Good luck on the test tomorrow! 😊"
-2. **MILD:** "You're actually so annoying sometimes"
-3. **MILD:** "nobody even likes talking to you"
-4. **SEVERE:** "you should just disappear, nobody wants you here"
+## 🛠️ Technology Stack
 
-*(Note: The 3rd mild message triggers the escalation logic and auto-promotes the incident to severe.)*
+| Component | Technology | Description |
+| :--- | :--- | :--- |
+| **Backend Core** | Node.js & Express | Lightweight backend infrastructure |
+| **WebSocket** | Socket.io | Real-time bi-directional event-based communication |
+| **AI Engine** | Anthropic / Claude SDK | Determines safety viability & score of incoming text |
+| **Alerts** | Nodemailer | Handles parent/admin email dispatch sequences |
+| **Frontend** | Vanilla JS/HTML/CSS | No-build zero-dependency UI for immediate serving |
 
-This demonstrates how Aegis reads the pattern, not just individual messages, succeeding where traditional keyword-based systems might fail.
+---
+
+## 🚀 Getting Started
+
+### 1. Installation
+
+Clone this repository and install the initial node dependencies:
+```bash
+git clone https://github.com/Sadiq-Kolakar/Aegis-AI.git
+cd Aegis-AI
+npm install
+```
+
+### 2. Environment Setup
+Create a `.env` file at the root of the project to safely store your keys.
+
+```env
+# AI Integration
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# Email Alert Configuration (Optional for local testing)
+EMAIL_ENABLED=true 
+EMAIL_USER=your_sending_email@gmail.com
+EMAIL_PASS=your_app_password
+PARENT_EMAIL=parent_or_admin_email@domain.com
+
+# Server Settings
+PORT=3000
+```
+
+### 3. Launch the Server
+
+Run the development server. The terminal will automatically display the exact URLs you need to access.
+```bash
+npm start
+```
+
+*   **Laptop (Receiver)**: Open `http://localhost:3000`
+*   **Phone (Sender)**: Open the local IP URL formatted as `http://<your-ip>:3000/mobile.html`
+
+*(Ensure both your computer and your mobile device are on the same Wi-Fi network to communicate properly.)*
+
+---
+
+## 🎭 Demo Script Walkthrough
+
+To see Aegis pattern detection work its magic, try simulating this conversation from your Phone to the Desktop:
+
+1.  **🟢 SAFE**: `"Good luck on the test tomorrow! 😊"`
+2.  **🟡 MILD**: `"You're actually so annoying sometimes"`
+3.  **🟡 MILD**: `"nobody even likes talking to you"`
+4.  **🔴 SEVERE**: `"you should just disappear, nobody wants you here"`
+> *Wait, watch what happens at Step 3! Because it's the repeated mild offense, Aegis-AI recognizes the sustained pattern and automatically promotes it to a severe intervention block!*
+
+---
+
+<div align="center">
+  <i>Concept Demo Engineered for Real-Time Safety & Protection</i>
+</div>
